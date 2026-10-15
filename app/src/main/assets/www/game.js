@@ -457,14 +457,14 @@ if (typeof document !== 'undefined') (function () {
     }
     var p = S.players[S.turn];
     renderAll();
+    if (S.contract.id === 'trix' && legalTrix(S, S.turn).length === 0) {
+      var n = applyStuck(S, S.turn);
+      toast((p.human ? 'ما في حركة! عجز' : p.name + ' انعجز') + ' — خصم ' + (n * 10), 1800);
+      renderAll();
+      later(proceed, 500);
+      return;
+    }
     if (p.human) {
-      if (S.contract.id === 'trix' && legalTrix(S, S.turn).length === 0) {
-        var n = applyStuck(S, S.turn);
-        toast('ما في حركة! عجز — خصم ' + (n * 10), 1800);
-        renderAll();
-        later(proceed, 500);
-        return;
-      }
       setStatus('دورك — العب');
     } else {
       setStatus('دور: ' + p.name);

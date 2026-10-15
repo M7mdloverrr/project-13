@@ -6,7 +6,6 @@ const T = require('../app/src/main/assets/www/game.js');
 // apply trix stuck penalties correctly and produce sane scores.
 for (let run = 0; run < 50; run++) {
   const S = T.createGame();
-  let plays = 0, guard = 0;
   for (let round = 0; round < 5; round++) {
     S.chooser = round < 4 ? round : 0;
     T.dealRound(S);
@@ -14,7 +13,7 @@ for (let run = 0; run < 50; run++) {
     const id = round === 4 ? S.remaining[0] : T.aiPickContract(S);
     T.activateRound(S, id);
     const trix = id === 'trix';
-    let roundOver = false;
+    let roundOver = false, plays = 0, stuck = 0, guard = 0;
     while (!roundOver) {
       if (++guard > 5000) throw new Error('game does not terminate');
       if (!trix) {
@@ -30,6 +29,7 @@ for (let run = 0; run < 50; run++) {
       if (trix && legal.length === 0) {
         // stuck: -10 per remaining card, player leaves the round
         const n = T.applyStuck(S, seat);
+        stuck += n;
         assert.ok(n > 0 && p.done && p.hand.length === 0);
         S.turn = (S.turn + 1) % 4;
         continue;
@@ -47,12 +47,13 @@ for (let run = 0; run < 50; run++) {
     S.players.forEach((p, i) => { p.score += deltas[i]; });
     if (trix) {
       assert.ok(S.players.every(p => p.done), 'trix round ends with everyone done');
+      assert.strictEqual(plays + stuck, 52, 'every card played or penalised in trix');
     } else {
       assert.ok(S.players.every(p => p.hand.length === 0), 'trick round drains all hands');
+      assert.strictEqual(plays, 52, 'every card played in a kingdom round');
       assert.strictEqual(S.players.reduce((n, p) => n + p.taken.length, 0), 52);
     }
   }
-  assert.strictEqual(plays, 52, 'all 52 cards must be played across the game');
   S.players.forEach(p => assert.ok(Number.isInteger(p.score) && p.score <= 0));
   assert.ok(S.remaining.length === 0, 'all five contracts played');
 }

@@ -558,6 +558,16 @@ if (typeof document !== 'undefined') (function () {
     start: start, pick: pick, rules: rules, closeRules: hideModal,
     nextRound: nextRoundBtn, newGame: newGame
   };
+
+  /* explicit listeners for home buttons (with debug logs) */
+  function wireHome() {
+    console.log('تركس: game.js loaded, wiring home buttons');
+    var bStart = document.getElementById('btnStart');
+    var bRules = document.getElementById('btnRules');
+    if (bStart) bStart.addEventListener('click', function () { console.log('start clicked'); start(); });
+    if (bRules) bRules.addEventListener('click', function () { console.log('rules clicked'); rules(); });
+  }
+  wireHome();
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = TrixCore;

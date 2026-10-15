@@ -1,3 +1,4 @@
+[hidden]{display:none !important}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
 html,body{height:100%;overflow:hidden}
 body{
@@ -37,7 +38,7 @@ body{
 #home .sub{color:#cdb87f;font-size:15px;margin-bottom:14px}
 
 /* ---------- layout ---------- */
-#game{height:100dvh;display:flex;flex-direction:column}
+#game{height:100vh;height:100dvh;display:flex;flex-direction:column}
 #bar{display:flex;align-items:center;gap:7px;padding:8px 10px;flex-wrap:nowrap}
 .chip{
   background:rgba(212,175,55,.14);border:1px solid rgba(212,175,55,.4);
@@ -82,7 +83,7 @@ body{
 .card .s{font-size:21px;line-height:1}
 .card.red{color:#c0392b}.card.blk{color:#23201a}
 
-#trick{position:absolute;inset:0;pointer-events:none}
+#trick{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}
 .tcard{position:absolute;left:50%;top:50%;width:46px;height:66px;margin-left:-23px;margin-top:-33px;border-radius:7px;
   background:linear-gradient(160deg,#fdf8ea,#efe4c4);box-shadow:0 3px 10px rgba(0,0,0,.55);
   display:flex;flex-direction:column;align-items:center;justify-content:center;transition:transform .25s}
@@ -94,7 +95,7 @@ body{
 .tcard.pos3{transform:translate(-72px,0)}
 
 /* ---------- trix rows ---------- */
-#rows{position:absolute;inset:6px;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:4px 6px}
+#rows{position:absolute;top:6px;left:6px;right:6px;bottom:6px;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:4px 6px}
 .trow{display:flex;align-items:center;gap:5px;direction:ltr;justify-content:center}
 .tlabel{font-size:17px;width:16px;text-align:center}
 .tlabel.red{color:#ff8f7d}.tlabel.blk{color:#e8d79a}
@@ -124,7 +125,7 @@ body{
   max-width:88vw;text-align:center;
 }
 #toast.show{opacity:1}
-#modalWrap{position:fixed;inset:0;z-index:50;background:rgba(8,5,0,.4);display:flex;align-items:flex-end;justify-content:center}
+#modalWrap{position:fixed;top:0;left:0;right:0;bottom:0;z-index:50;background:rgba(8,5,0,.4);display:flex;align-items:flex-end;justify-content:center}
 #modal{
   width:100%;max-width:520px;max-height:78vh;overflow-y:auto;
   background:linear-gradient(180deg,#2e2210,#1c1408);

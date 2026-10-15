@@ -26,8 +26,8 @@ body{
 .logo-cards{display:flex;gap:10px;margin-bottom:6px}
 .mini-card{
   width:56px;height:80px;border-radius:9px;background:linear-gradient(160deg,#fbf4e0,#eee1bd);
+  border:2px solid #d4af37;box-shadow:0 4px 10px rgba(0,0,0,.5),inset 0 0 0 2px rgba(255,255,255,.8);
   color:#23201a;font-size:22px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  box-shadow:0 4px 10px rgba(0,0,0,.5);
 }
 .mini-card span{font-size:26px}
 .mini-card.red{color:#c0392b}
@@ -73,26 +73,31 @@ body{
 
 /* ---------- cards ---------- */
 .card{
-  width:50px;height:72px;border-radius:7px;flex-shrink:0;
+  width:64px;height:92px;border-radius:10px;flex-shrink:0;
   background:linear-gradient(160deg,#fdf8ea,#efe4c4);
-  box-shadow:0 2px 7px rgba(0,0,0,.5);
+  border:2px solid #d4af37;
+  box-shadow:0 3px 10px rgba(0,0,0,.55),inset 0 0 0 2px rgba(255,255,255,.85);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
   position:relative;
 }
-.card .r{font-size:17px;font-weight:800}
-.card .s{font-size:21px;line-height:1}
+.card .r{font-size:21px;font-weight:800}
+.card .s{font-size:26px;line-height:1}
+.card .corner{position:absolute;top:3px;right:3px;display:flex;flex-direction:column;align-items:center;line-height:1;pointer-events:none}
+.card .cr{font-size:13px;font-weight:800}
+.card .cs{font-size:12px}
 .card.red{color:#c0392b}.card.blk{color:#23201a}
 
 #trick{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}
-.tcard{position:absolute;left:50%;top:50%;width:46px;height:66px;margin-left:-23px;margin-top:-33px;border-radius:7px;
-  background:linear-gradient(160deg,#fdf8ea,#efe4c4);box-shadow:0 3px 10px rgba(0,0,0,.55);
+.tcard{position:absolute;left:50%;top:50%;width:58px;height:84px;margin-left:-29px;margin-top:-42px;border-radius:10px;
+  background:linear-gradient(160deg,#fdf8ea,#efe4c4);border:2px solid #d4af37;
+  box-shadow:0 4px 12px rgba(0,0,0,.6),inset 0 0 0 2px rgba(255,255,255,.85);
   display:flex;flex-direction:column;align-items:center;justify-content:center;transition:transform .25s}
-.tcard .r{font-size:15px;font-weight:800}.tcard .s{font-size:19px}
+.tcard .r{font-size:19px;font-weight:800}.tcard .s{font-size:23px}
 .tcard.red{color:#c0392b}.tcard.blk{color:#23201a}
-.tcard.pos0{transform:translate(0,54px)}
-.tcard.pos1{transform:translate(72px,0)}
-.tcard.pos2{transform:translate(0,-54px)}
-.tcard.pos3{transform:translate(-72px,0)}
+.tcard.pos0{transform:translate(0,64px)}
+.tcard.pos1{transform:translate(88px,0)}
+.tcard.pos2{transform:translate(0,-64px)}
+.tcard.pos3{transform:translate(-88px,0)}
 
 /* ---------- trix rows ---------- */
 #rows{position:absolute;top:6px;left:6px;right:6px;bottom:6px;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:4px 6px}
@@ -101,25 +106,27 @@ body{
 .tlabel.red{color:#ff8f7d}.tlabel.blk{color:#e8d79a}
 .slots{display:flex;gap:2px}
 .slot{
-  width:21px;height:34px;border-radius:4px;border:1px dashed rgba(212,175,55,.28);
-  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#8c7a4a;
+  width:22px;height:36px;border-radius:5px;border:1px dashed rgba(212,175,55,.28);
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#8c7a4a;
 }
-.slot.filled{background:linear-gradient(160deg,#fdf8ea,#efe4c4);border:none;color:#23201a;box-shadow:0 2px 5px rgba(0,0,0,.5)}
+.slot.filled{background:linear-gradient(160deg,#fdf8ea,#efe4c4);border:1px solid #d4af37;color:#23201a;box-shadow:0 2px 5px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.7)}
 .slot.filled.red{color:#c0392b}
 
 /* ---------- hand ---------- */
 #hand{
-  min-height:96px;display:flex;align-items:center;justify-content:center;
-  padding:10px 6px 16px;direction:rtl;overflow-x:auto;
+  min-height:138px;display:flex;align-items:flex-end;justify-content:center;
+  padding:10px 6px 18px;direction:rtl;overflow-x:auto;
+  background:linear-gradient(180deg,rgba(0,0,0,.28),rgba(0,0,0,.5));
+  border-top:1px solid rgba(212,175,55,.45);
 }
-#hand .card{margin-inline-start:-32px;transition:transform .15s,filter .15s}
+#hand .card{margin-inline-start:-42px;transition:transform .15s,box-shadow .15s}
 #hand .card:first-child{margin-inline-start:0}
-#hand .card.ok{transform:translateY(-8px);box-shadow:0 0 0 2px #f0d878,0 6px 14px rgba(212,175,55,.45)}
+#hand .card.ok{transform:translateY(-14px);box-shadow:0 0 0 3px #ffe089,0 10px 20px rgba(212,175,55,.55);z-index:3}
 #hand .card.no{filter:brightness(.45)}
 
 /* ---------- toast & modal ---------- */
 #toast{
-  position:fixed;bottom:118px;left:50%;transform:translateX(-50%);z-index:60;
+  position:fixed;bottom:162px;left:50%;transform:translateX(-50%);z-index:60;
   background:rgba(20,14,4,.94);border:1px solid rgba(212,175,55,.55);color:#f0d878;
   padding:9px 18px;border-radius:24px;font-size:14px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .25s;
   max-width:88vw;text-align:center;

@@ -355,25 +355,19 @@ if (typeof document !== 'undefined') (function () {
     var legalIds = myTurn ? legalPlays(S, 0).map(function (c) { return c.id; }) : null;
     var h = '';
     S.players[0].hand.forEach(function (c) {
-      var cls = 'card';
+      var cls = 'card bigcard ' + (RED[c.s] ? 'red' : 'blk');
       if (legalIds) cls += (legalIds.indexOf(c.id) >= 0 ? ' ok' : ' no');
       h += '<div class="' + cls + '" data-id="' + c.id + '">' +
-           '<div class="corner"><span class="cr">' + RANK_LABEL[c.r] + '</span><span class="cs">' + SUITS[c.s] + '</span></div>' +
+           '<div class="corner c-tl"><span class="cr">' + RANK_LABEL[c.r] + '</span><span class="cs">' + SUITS[c.s] + '</span></div>' +
+           '<div class="corner c-br"><span class="cr">' + RANK_LABEL[c.r] + '</span><span class="cs">' + SUITS[c.s] + '</span></div>' +
            '<div class="r">' + RANK_LABEL[c.r] + '</div><div class="s">' + SUITS[c.s] + '</div></div>';
     });
     el('hand').innerHTML = h;
-    var hand = el('hand');
-    var kids = hand.querySelectorAll('.card');
-    /* auto-fit: spread cards so all fit the screen width, corner stays readable */
-    var CW = 64, n = kids.length;
-    var show = n > 1 ? Math.floor((hand.clientWidth - 12 - CW) / (n - 1)) : CW;
-    if (show > 34) show = 34;
-    if (show < 18) show = 18;
-    for (var i = 0; i < n; i++) {
-      (function (d, first) {
+    var kids = el('hand').querySelectorAll('.card');
+    for (var i = 0; i < kids.length; i++) {
+      (function (d) {
         d.addEventListener('click', function () { tapCard(parseInt(d.dataset.id, 10)); });
-        if (!first) d.style.marginRight = (show - CW) + 'px'; /* rtl inline-start */
-      })(kids[i], i === 0);
+      })(kids[i]);
     }
   }
 

@@ -1,4 +1,4 @@
-/* تركس — Trix card game (Arab style) */
+/* تركس — Trix card game (Jawaker style) */
 'use strict';
 
 /* ============ CORE (pure logic, testable in node) ============ */
@@ -6,18 +6,19 @@
 var SUITS = ['♠', '♥', '♦', '♣'];
 var RED = { 1: true, 2: true };
 var RANK_LABEL = { 1: 'A', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 8: '8', 9: '9', 10: '10', 11: 'J', 12: 'Q', 13: 'K' };
-var PEN = { trick: 10, queen: 50, heart: 20, shabah: 75, stuck: 10 };
+var PEN = { trick: 10, queen: 25, dinar: 10, khtiyar: 75, stuck: 10 };
 
 var CONTRACTS = {
-  salb:   { id: 'salb',   name: 'السلب',   desc: 'لا تأخذ أي ضربة — كل ضربة خصم 10' },
-  banat:  { id: 'banat',  name: 'البنات',  desc: 'تجنّب أسر البنات — كل بنت خصم 50' },
-  qulub:  { id: 'qulub',  name: 'القلوب', desc: 'تجنّب أخذ القلوب — كل قلب خصم 20' },
-  shabah: { id: 'shabah', name: 'الشعبان', desc: 'تجنّب أسر K♥ — الخصم 75' },
-  trix:   { id: 'trix',   name: 'التركيس', desc: 'رتّب الصفوف من الـ7 — العجز خصم 10 لكل ورقة' }
+  latsh:   { id: 'latsh',   name: 'لطش',   desc: 'لا تأخذ أي ضربة — كل ضربة خصم 10' },
+  banat:   { id: 'banat',   name: 'بنات',  desc: 'تجنّب أسر البنات — كل بنت خصم 25' },
+  dinar:   { id: 'dinar',   name: 'دينار', desc: 'تجنّب أخذ الدينار ♦ — كل دينار خصم 10' },
+  khtiyar: { id: 'khtiyar', name: 'ختيار', desc: 'تجنّب أسر الختيار K♥ — الخصم 75' },
+  trix:    { id: 'trix',    name: 'تركس',  desc: 'رتّب الصفوف من الـ7 — العجز خصم 10 لكل ورقة' }
 };
-var CONTRACT_ORDER = ['salb', 'banat', 'qulub', 'shabah', 'trix'];
+var CONTRACT_ORDER = ['latsh', 'banat', 'dinar', 'khtiyar', 'trix'];
 
 function isHeart(c) { return c.s === 1; }
+function isDiamond(c) { return c.s === 2; }
 function isQueen(c) { return c.r === 12; }
 function isKingHearts(c) { return c.s === 1 && c.r === 13; }
 function strength(c) { return c.r === 1 ? 14 : c.r; }
@@ -44,20 +45,19 @@ function createGame(names) {
     players: names.map(function (n, i) {
       return { seat: i, name: n, human: i === 0, score: 0, hand: [], taken: [], tricks: 0, done: false, trixPenalty: 0 };
     }),
-    round: 0,               // 0..4
+    round: 0,
     remaining: CONTRACT_ORDER.slice(),
     contract: null,
     chooser: 0,
     turn: 0,
-    table: [],              // [{seat, card}]
+    table: [],
     leadSuit: null,
-    heartsOpened: false,
-    rows: null,             // trix: [{started, low, high, cards:{rank:seat}}]
-    phase: 'idle'           // idle | pick | play | roundEnd | gameEnd
+    rows: null,
+    lastThrow: null,
+    phase: 'idle'
   };
 }
 
-/* deal a fresh hand of 13 cards to each player (contract not yet chosen) */
 function dealRound(state) {
   var deck = shuffle(newDeck());
   state.players.forEach(function (p, i) {
@@ -65,12 +65,11 @@ function dealRound(state) {
     sortHand(p.hand);
     p.taken = []; p.tricks = 0; p.done = false; p.trixPenalty = 0;
   });
-  state.table = []; state.leadSuit = null; state.heartsOpened = false;
+  state.table = []; state.leadSuit = null; state.lastThrow = null;
   state.contract = null; state.rows = null;
   state.phase = 'pick';
 }
 
-/* activate the chosen contract for the dealt cards */
 function activateRound(state, contractId) {
   state.contract = CONTRACTS[contractId];
   state.remaining = state.remaining.filter(function (x) { return x !== contractId; });
@@ -84,14 +83,7 @@ function activateRound(state, contractId) {
 function legalPlays(state, seat) {
   var hand = state.players[seat].hand;
   if (state.contract.id === 'trix') return legalTrix(state, seat);
-  if (state.table.length === 0) {
-    // leading: hearts closed until opened (unless hand is all hearts)
-    if (!state.heartsOpened) {
-      var nonHearts = hand.filter(function (c) { return !isHeart(c); });
-      if (nonHearts.length) return nonHearts;
-    }
-    return hand.slice();
-  }
+  if (state.table.length === 0) return hand.slice();
   var follows = hand.filter(function (c) { return c.s === state.leadSuit; });
   return follows.length ? follows : hand.slice();
 }
@@ -102,7 +94,7 @@ function legalTrix(state, seat) {
     var row = state.rows[c.s];
     return row.started && (c.r === row.low - 1 || c.r === row.high + 1);
   });
-  if (ext.length) return ext; // cannot open a 7 while an extension exists
+  if (ext.length) return ext;
   return hand.filter(function (c) { return c.r === 7 && !state.rows[c.s].started; });
 }
 
@@ -115,7 +107,6 @@ function illegalMsg(state, seat, card) {
   if (state.table.length > 0 && card.s !== state.leadSuit &&
       state.players[seat].hand.some(function (c) { return c.s === state.leadSuit; }))
     return 'لازم تلعب من نوع الورقة الأولى';
-  if (state.table.length === 0 && !state.heartsOpened && isHeart(card)) return 'القلوب مقفلة بعد';
   return 'حركة غير مسموحة';
 }
 
@@ -134,7 +125,6 @@ function applyPlay(state, seat, card) {
   } else {
     if (state.table.length === 0) state.leadSuit = card.s;
     state.table.push({ seat: seat, card: card });
-    if (isHeart(card)) state.heartsOpened = true;
   }
   return { ok: true };
 }
@@ -153,7 +143,6 @@ function resolveTrick(state) {
   return best.seat;
 }
 
-/* stuck in trix: no legal move at all → penalty per remaining card */
 function applyStuck(state, seat) {
   var p = state.players[seat];
   p.trixPenalty += p.hand.length * PEN.stuck;
@@ -167,10 +156,10 @@ function computeDeltas(state) {
   var id = state.contract.id;
   return state.players.map(function (p) {
     var pen = 0;
-    if (id === 'salb') pen = p.tricks * PEN.trick;
+    if (id === 'latsh') pen = p.tricks * PEN.trick;
     if (id === 'banat') pen = p.taken.filter(isQueen).length * PEN.queen;
-    if (id === 'qulub') pen = p.taken.filter(isHeart).length * PEN.heart;
-    if (id === 'shabah') pen = p.taken.some(isKingHearts) ? PEN.shabah : 0;
+    if (id === 'dinar') pen = p.taken.filter(isDiamond).length * PEN.dinar;
+    if (id === 'khtiyar') pen = p.taken.some(isKingHearts) ? PEN.khtiyar : 0;
     if (id === 'trix') pen = p.trixPenalty;
     return pen === 0 ? 0 : -pen;
   });
@@ -180,18 +169,17 @@ function computeDeltas(state) {
 function aiPickContract(state) {
   var seat = state.chooser;
   var hand = state.players[seat].hand;
-  // choose based on the hand that was just dealt
-  var hearts = hand.filter(isHeart).length;
+  var dinars = hand.filter(isDiamond).length;
   var queens = hand.filter(isQueen).length;
   var hasKH = hand.some(isKingHearts);
   var opts = state.remaining.slice();
   var best = opts[0], bestScore = -1e9;
   opts.forEach(function (id) {
     var sc = 0;
-    if (id === 'qulub') sc = 12 - hearts * 1.6;
-    if (id === 'banat') sc = 12 - queens * 5;
-    if (id === 'shabah') sc = 12 - (hasKH ? 8 : 0);
-    if (id === 'salb') sc = 8 - hand.filter(function (c) { return strength(c) >= 12; }).length;
+    if (id === 'dinar') sc = 12 - dinars * 1.6;
+    if (id === 'banat') sc = 12 - queens * 2.5;
+    if (id === 'khtiyar') sc = 12 - (hasKH ? 8 : 0);
+    if (id === 'latsh') sc = 8 - hand.filter(function (c) { return strength(c) >= 12; }).length;
     if (id === 'trix') sc = 9;
     sc += Math.random() * 3;
     if (sc > bestScore) { bestScore = sc; best = id; }
@@ -211,11 +199,10 @@ function aiTrick(state, seat) {
   var lead = state.leadSuit;
 
   if (state.table.length === 0) {
-    // leading: try to dump a penalty card, else lead low
     var dump;
     if (id === 'banat') dump = legal.filter(isQueen);
-    else if (id === 'qulub') dump = legal.filter(isHeart);
-    else if (id === 'shabah') dump = legal.filter(isKingHearts);
+    else if (id === 'dinar') dump = legal.filter(isDiamond);
+    else if (id === 'khtiyar') dump = legal.filter(isKingHearts);
     if (dump && dump.length) {
       dump.sort(function (a, b) { return strength(b) - strength(a); });
       return dump[0];
@@ -226,15 +213,13 @@ function aiTrick(state, seat) {
 
   var follows = legal.filter(function (c) { return c.s === lead; });
   if (!follows.length) {
-    // void: throw the most dangerous card away
     var danger = legal.filter(function (c) {
-      return (id === 'banat' && isQueen(c)) || (id === 'qulub' && isHeart(c)) || (id === 'shabah' && isKingHearts(c));
+      return (id === 'banat' && isQueen(c)) || (id === 'dinar' && isDiamond(c)) || (id === 'khtiyar' && isKingHearts(c));
     });
     var pool = danger.length ? danger : legal;
     pool = pool.slice().sort(function (a, b) { return strength(b) - strength(a); });
     return pool[0];
   }
-  // must follow suit: prefer highest card that loses, else lowest winner
   var best = state.table[0];
   state.table.forEach(function (t) {
     if (t.card.s === lead && strength(t.card) > strength(best.card)) best = t;
@@ -253,7 +238,6 @@ function aiTrix(state, seat) {
   var legal = legalTrix(state, seat);
   var sevens = legal.filter(function (c) { return c.r === 7; });
   if (sevens.length) {
-    // open the 7 of the suit we hold the most of
     sevens.sort(function (a, b) {
       var ca = p.hand.filter(function (x) { return x.s === a.s; }).length;
       var cb = p.hand.filter(function (x) { return x.s === b.s; }).length;
@@ -270,7 +254,7 @@ var TrixCore = {
   dealRound: dealRound, activateRound: activateRound,
   legalPlays: legalPlays, legalTrix: legalTrix, applyPlay: applyPlay, resolveTrick: resolveTrick,
   applyStuck: applyStuck, computeDeltas: computeDeltas,
-  isHeart: isHeart, isQueen: isQueen, isKingHearts: isKingHearts, strength: strength,
+  isHeart: isHeart, isDiamond: isDiamond, isQueen: isQueen, isKingHearts: isKingHearts, strength: strength,
   aiPickContract: aiPickContract, aiChoose: aiChoose
 };
 
@@ -284,10 +268,97 @@ if (typeof document !== 'undefined') (function () {
   function later(fn, ms) { var t = setTimeout(fn, ms); timers.push(t); return t; }
   function clearTimers() { timers.forEach(clearTimeout); timers = []; }
 
+  /* ---------- sound: card-throw swish + thump (WebAudio synth) ---------- */
+  var Snd = (function () {
+    var ctx = null;
+    function init() {
+      try {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        if (!ctx) ctx = new AC();
+        if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
+      } catch (e) { ctx = null; }
+    }
+    function play() {
+      if (!ctx) return;
+      try {
+        var t0 = ctx.currentTime;
+        var sr = ctx.sampleRate;
+        var n = Math.floor(sr * 0.13);
+        var buf = ctx.createBuffer(1, n, sr);
+        var data = buf.getChannelData(0);
+        for (var i = 0; i < n; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 1.7);
+        var src = ctx.createBufferSource(); src.buffer = buf;
+        var bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.setValueAtTime(500, t0);
+        bp.frequency.exponentialRampToValueAtTime(2800, t0 + 0.1);
+        bp.Q.value = 1.2;
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0.45, t0);
+        g.gain.exponentialRampToValueAtTime(0.01, t0 + 0.13);
+        src.connect(bp); bp.connect(g); g.connect(ctx.destination);
+        src.start(t0);
+        var o = ctx.createOscillator();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(170, t0 + 0.08);
+        o.frequency.exponentialRampToValueAtTime(70, t0 + 0.17);
+        var g2 = ctx.createGain();
+        g2.gain.setValueAtTime(0.001, t0 + 0.08);
+        g2.gain.exponentialRampToValueAtTime(0.4, t0 + 0.095);
+        g2.gain.exponentialRampToValueAtTime(0.001, t0 + 0.2);
+        o.connect(g2); g2.connect(ctx.destination);
+        o.start(t0 + 0.08); o.stop(t0 + 0.22);
+      } catch (e) {}
+    }
+    return { init: init, play: play };
+  })();
+
+  function buzz() {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(12); } catch (e) {}
+    }
+  }
+
+  /* ---------- court-card figures (الصور: J / Q / K) ---------- */
+  function courtSVG(r, red) {
+    var cc = red ? '#b71c1c' : '#262626';
+    var G = '#d4af37', L = '#8a6500', skin = '#f6d7a8', hair = '#3a2a14';
+    var head = '<circle cx="32" cy="36" r="10.5" fill="' + skin + '" stroke="' + L + '" stroke-width="1"/>' +
+      '<circle cx="28.5" cy="35" r="1.3" fill="#2a1a08"/><circle cx="35.5" cy="35" r="1.3" fill="#2a1a08"/>' +
+      '<path d="M28 41 Q32 43.5 36 41" stroke="#2a1a08" stroke-width="1.2" fill="none" stroke-linecap="round"/>';
+    var robe = '<path d="M12 92 L12 64 Q32 52 52 64 L52 92 Z" fill="' + cc + '"/>' +
+      '<path d="M12 64 Q32 52 52 64 L52 60 Q32 48 12 60 Z" fill="' + G + '"/>';
+    var crownK = '<path d="M17 24 L21 9 L27 18 L32 6 L37 18 L43 9 L47 24 Z" fill="' + G + '" stroke="' + L + '" stroke-width="1.2" stroke-linejoin="round"/>' +
+      '<circle cx="21" cy="8" r="2" fill="' + G + '" stroke="' + L + '" stroke-width="0.8"/>' +
+      '<circle cx="32" cy="5" r="2.2" fill="' + G + '" stroke="' + L + '" stroke-width="0.8"/>' +
+      '<circle cx="43" cy="8" r="2" fill="' + G + '" stroke="' + L + '" stroke-width="0.8"/>';
+    var beard = '<path d="M23 43 Q24 56 32 58 Q40 56 41 43 Q37 50 32 50 Q27 50 23 43 Z" fill="#e2e2e2" stroke="#b5b5b5" stroke-width="0.8"/>';
+    var crownQ = '<path d="M24 22 L27 10 L32 17 L37 10 L40 22 Z" fill="' + G + '" stroke="' + L + '" stroke-width="1.1" stroke-linejoin="round"/>' +
+      '<circle cx="37" cy="9" r="1.8" fill="#fff" stroke="' + L + '" stroke-width="0.7"/>';
+    var hairQ = '<path d="M20 34 Q20 16 32 16 Q44 16 44 34 L44 48 Q40 39 32 39 Q24 39 20 48 Z" fill="' + hair + '"/>';
+    var hatJ = '<path d="M16 28 Q32 6 48 28 Z" fill="' + cc + '" stroke="' + L + '" stroke-width="1.2"/>' +
+      '<path d="M46 16 Q56 7 61 13 Q54 19 46 16 Z" fill="' + G + '" stroke="' + L + '" stroke-width="0.8"/>';
+    var body;
+    if (r === 13) body = crownK + head + beard + robe;
+    else if (r === 12) body = hairQ + crownQ + head + robe +
+      '<path d="M27 61 L32 67 L37 61" stroke="' + G + '" stroke-width="2.5" fill="none"/>';
+    else body = hatJ + head + robe;
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 92">' + body + '</svg>';
+  }
+
+  function cardFace(c) {
+    var corner =
+      '<div class="corner c-tl"><span class="cr">' + RANK_LABEL[c.r] + '</span><span class="cs">' + SUITS[c.s] + '</span></div>' +
+      '<div class="corner c-br"><span class="cr">' + RANK_LABEL[c.r] + '</span><span class="cs">' + SUITS[c.s] + '</span></div>';
+    var center = c.r >= 11
+      ? '<div class="fig">' + courtSVG(c.r, !!RED[c.s]) + '</div>'
+      : '<div class="r">' + RANK_LABEL[c.r] + '</div><div class="s">' + SUITS[c.s] + '</div>';
+    return corner + center;
+  }
+
   function cardHTML(c, cls) {
-    var color = RED[c.s] ? 'red' : 'blk';
-    return '<div class="' + (cls || 'card') + ' ' + color + '"><div class="r">' + RANK_LABEL[c.r] +
-           '</div><div class="s">' + SUITS[c.s] + '</div></div>';
+    return '<div class="' + (cls || 'card') + ' ' + (RED[c.s] ? 'red' : 'blk') + '">' + cardFace(c) + '</div>';
   }
 
   function toast(msg, ms) {
@@ -303,7 +374,6 @@ if (typeof document !== 'undefined') (function () {
   function renderBar() {
     el('roundChip').textContent = 'الجولة ' + (S.round + 1) + '/5';
     el('contractChip').textContent = S.contract ? S.contract.name : 'اختر الجولة';
-    el('heartsChip').hidden = !(S.contract && S.contract.id !== 'trix' && S.heartsOpened);
   }
 
   function renderScores() {
@@ -326,28 +396,36 @@ if (typeof document !== 'undefined') (function () {
   }
 
   function renderTrick() {
+    var lt = (S.lastThrow && S.contract && S.contract.id !== 'trix') ? S.lastThrow : null;
     var h = '';
     S.table.forEach(function (t) {
-      h += cardHTML(t.card, 'tcard pos' + t.seat);
+      var thrown = lt && t.seat === lt.seat && t.card.id === lt.id;
+      h += cardHTML(t.card, 'tcard pos' + t.seat + (thrown ? ' thrown' : ''));
     });
     el('trick').innerHTML = h;
     el('trick').style.display = S.contract && S.contract.id === 'trix' ? 'none' : 'block';
+    if (lt) S.lastThrow = null;
   }
 
   function renderRows() {
     if (!S.rows) { el('rows').innerHTML = ''; return; }
+    var lt = (S.lastThrow && S.contract && S.contract.id === 'trix') ? S.lastThrow : null;
     var order = [13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
     var h = '';
     for (var s = 0; s < 4; s++) {
       var row = S.rows[s];
       h += '<div class="trow"><div class="tlabel ' + (RED[s] ? 'red' : 'blk') + '">' + SUITS[s] + '</div><div class="slots">';
       order.forEach(function (r) {
-        if (row.cards[r] !== undefined) h += '<div class="slot filled ' + (RED[s] ? 'red' : 'blk') + '">' + RANK_LABEL[r] + '</div>';
+        if (row.cards[r] !== undefined) {
+          var pop = lt && lt.s === s && lt.r === r ? ' pop' : '';
+          h += '<div class="slot filled ' + (RED[s] ? 'red' : 'blk') + pop + '">' + RANK_LABEL[r] + '</div>';
+        }
         else h += '<div class="slot">' + RANK_LABEL[r] + '</div>';
       });
       h += '</div></div>';
     }
     el('rows').innerHTML = h;
+    if (lt) S.lastThrow = null;
   }
 
   function renderHand() {
@@ -357,10 +435,7 @@ if (typeof document !== 'undefined') (function () {
     S.players[0].hand.forEach(function (c) {
       var cls = 'card bigcard ' + (RED[c.s] ? 'red' : 'blk');
       if (legalIds) cls += (legalIds.indexOf(c.id) >= 0 ? ' ok' : ' no');
-      h += '<div class="' + cls + '" data-id="' + c.id + '">' +
-           '<div class="corner c-tl"><span class="cr">' + RANK_LABEL[c.r] + '</span><span class="cs">' + SUITS[c.s] + '</span></div>' +
-           '<div class="corner c-br"><span class="cr">' + RANK_LABEL[c.r] + '</span><span class="cs">' + SUITS[c.s] + '</span></div>' +
-           '<div class="r">' + RANK_LABEL[c.r] + '</div><div class="s">' + SUITS[c.s] + '</div></div>';
+      h += '<div class="' + cls + '" data-id="' + c.id + '">' + cardFace(c) + '</div>';
     });
     el('hand').innerHTML = h;
     var kids = el('hand').querySelectorAll('.card');
@@ -384,6 +459,7 @@ if (typeof document !== 'undefined') (function () {
 
   /* ---------- flow ---------- */
   function start() {
+    Snd.init();
     el('home').style.display = 'none';
     el('game').hidden = false;
     S = createGame();
@@ -478,6 +554,7 @@ if (typeof document !== 'undefined') (function () {
   }
 
   function tapCard(id) {
+    Snd.init();
     if (S.phase !== 'play' || !S.players[S.turn].human) { toast('مو دورك'); return; }
     var card = S.players[0].hand.filter(function (c) { return c.id === id; })[0];
     if (!card) return;
@@ -487,7 +564,11 @@ if (typeof document !== 'undefined') (function () {
   function doPlay(seat, card) {
     var res = applyPlay(S, seat, card);
     if (!res.ok) { toast(res.msg); return; }
+    S.lastThrow = { seat: seat, id: card.id, s: card.s, r: card.r };
+    Snd.play();
+    buzz();
     S.turn = (S.turn + 1) % 4;
+    renderAll();
     proceed();
   }
 
@@ -545,12 +626,12 @@ if (typeof document !== 'undefined') (function () {
 
   function rules() {
     var h = '<h2>قوانين التركس</h2><div class="rules">' +
-      '<p><b>٥ جولات:</b> السلب، البنات، القلوب، الشعبان، والتركيس. كل لاعب يختار جولة، والجولة الأخيرة تكون المتبقية.</p>' +
-      '<p><b>السلب:</b> لا تأخذ أي ضربة — كل ضربة خصم 10.</p>' +
-      '<p><b>البنات:</b> تجنّب أسر البنات — كل بنت خصم 50.</p>' +
-      '<p><b>القلوب:</b> تجنّب أخذ القلوب — كل قلب خصم 20. ما تقدر تبدأ بالقلوب إلا بعد ما تنفتح.</p>' +
-      '<p><b>الشعبان:</b> تجنّب أسر K♥ — خصم 75.</p>' +
-      '<p><b>التركيس:</b> رتّب كل نوع من الـ7: فوق لحد K وتحت لحد A. ما تقدر تفتح 7 وأنت تقدر تلعب على صف مفتوح. إذا انعجزت: خصم 10 لكل ورقة بيدك.</p>' +
+      '<p><b>٥ جولات:</b> لطش، بنات، دينار، ختيار، وتركس. كل لاعب يختار جولة، والجولة الأخيرة تكون المتبقية.</p>' +
+      '<p><b>لطش:</b> لا تأخذ أي ضربة — كل ضربة خصم 10.</p>' +
+      '<p><b>بنات:</b> تجنّب أسر البنات — كل بنت خصم 25.</p>' +
+      '<p><b>دينار:</b> تجنّب أخذ الدينار ♦ — كل دينار خصم 10.</p>' +
+      '<p><b>ختيار:</b> تجنّب أسر الختيار K♥ — خصم 75.</p>' +
+      '<p><b>تركس:</b> رتّب كل نوع من الـ7: فوق لحد K وتحت لحد A. ما تقدر تفتح 7 وأنت تقدر تلعب على صف مفتوح. إذا انعجزت: خصم 10 لكل ورقة بيدك.</p>' +
       '<p>في الممالك: تلعب من نوع الورقة الأولى (إذا ما عندك، ارمي أي ورقة) وأعلى ورقة من نفس النوع تأخذ الضربة.</p>' +
       '</div><div class="center"><button class="btn" onclick="G.closeRules()">تم</button></div>';
     showModal(h);
@@ -561,13 +642,16 @@ if (typeof document !== 'undefined') (function () {
     nextRound: nextRoundBtn, newGame: newGame
   };
 
-  /* explicit listeners for home buttons (with debug logs) */
   function wireHome() {
     console.log('تركس: game.js loaded, wiring home buttons');
     var bStart = document.getElementById('btnStart');
     var bRules = document.getElementById('btnRules');
     if (bStart) bStart.addEventListener('click', function () { console.log('start clicked'); start(); });
     if (bRules) bRules.addEventListener('click', function () { console.log('rules clicked'); rules(); });
+    if (document.addEventListener) {
+      document.addEventListener('touchstart', function () { Snd.init(); }, false);
+      document.addEventListener('click', function () { Snd.init(); }, false);
+    }
   }
   wireHome();
 })();

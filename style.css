@@ -48,7 +48,6 @@ body{
   margin:0 3px;flex-shrink:0;
 }
 .chip.gold{background:linear-gradient(180deg,#f5d97b,#d4af37);color:#241a04;border:none}
-#heartsChip{color:#ff8f7d;border-color:rgba(255,120,100,.5)}
 #status{font-size:13px;color:#bfa96a;margin-right:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #scores{display:flex;padding:0 8px 6px}
 .score{
@@ -57,7 +56,12 @@ body{
 }
 .score b{display:block;font-size:15px;color:#f0d878}
 .score .sn{color:#cdb87f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#table{flex:1;position:relative;overflow:hidden}
+#table{
+  flex:1;position:relative;overflow:hidden;
+  background-color:#1d5c39;
+  background-image:radial-gradient(ellipse at 50% 40%,#2f8455 0%,#1e6440 45%,#0f4126 100%);
+  box-shadow:inset 0 0 70px rgba(0,0,0,.55),inset 0 0 0 3px rgba(212,175,55,.22);
+}
 
 /* ---------- seats ---------- */
 .seat{position:absolute;display:flex;flex-direction:column;align-items:center;z-index:5}
@@ -95,6 +99,10 @@ body{
 .card.red{color:#c62828}.card.blk{color:#000000}
 .card.red .cs, .card.red .s{color:#c62828}
 .card.blk .cs, .card.blk .s{color:#000000}
+.card .corner{z-index:2}
+.card .fig, .tcard .fig{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.card .fig svg{width:80%;height:86%}
+.tcard .fig svg{width:74%;height:80%}
 
 #trick{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}
 .tcard{position:absolute;left:50%;top:50%;width:66px;height:94px;margin-left:-33px;margin-top:-47px;border-radius:12px;
@@ -110,11 +118,24 @@ body{
 .tcard.pos2{transform:translate(0,-64px)}
 .tcard.pos3{transform:translate(-88px,0)}
 
+/* ---------- throw effect (مؤثر رمي الورقة) ---------- */
+.tcard.thrown{animation-duration:.42s;animation-timing-function:cubic-bezier(.15,.8,.3,1);animation-fill-mode:both}
+.tcard.pos0.thrown{animation-name:th0}
+.tcard.pos1.thrown{animation-name:th1}
+.tcard.pos2.thrown{animation-name:th2}
+.tcard.pos3.thrown{animation-name:th3}
+@keyframes th0{from{transform:translate(0,360px) rotate(18deg);opacity:.25}to{transform:translate(0,64px);opacity:1}}
+@keyframes th1{from{transform:translate(360px,70px) rotate(32deg);opacity:.25}to{transform:translate(88px,0);opacity:1}}
+@keyframes th2{from{transform:translate(0,-360px) rotate(-22deg);opacity:.25}to{transform:translate(0,-64px);opacity:1}}
+@keyframes th3{from{transform:translate(-360px,70px) rotate(-32deg);opacity:.25}to{transform:translate(-88px,0);opacity:1}}
+.slot.pop{animation:slotPop .4s cubic-bezier(.2,.85,.3,1.2) both}
+@keyframes slotPop{from{transform:scale(1.9);opacity:.15}to{transform:scale(1);opacity:1}}
+
 /* ---------- trix rows ---------- */
 #rows{position:absolute;top:6px;left:6px;right:6px;bottom:6px;display:flex;flex-direction:column;justify-content:center;padding:4px 6px}
 .trow{display:flex;align-items:center;direction:ltr;justify-content:center;margin:4px 0}
 .tlabel{font-size:17px;width:16px;text-align:center;margin-right:5px}
-.tlabel.red{color:#ff8f7d}.tlabel.blk{color:#e8d79a}
+.tlabel.red{color:#ff7060}.tlabel.blk{color:#f5eed8}
 .slots{display:flex}
 .slot{
   width:22px;height:36px;border-radius:5px;border:1px dashed rgba(212,175,55,.28);margin:0 1px;

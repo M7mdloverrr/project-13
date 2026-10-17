@@ -13,7 +13,7 @@ const C = (s, r) => ({ s, r, id: s * 100 + r });
   d.forEach(c => assert.ok(c.s >= 0 && c.s <= 3 && c.r >= 1 && c.r <= 13));
 }
 
-// setup helper: a game in the qulub kingdom with fixed hands
+// setup helper: a game in a kingdom with fixed hands
 function setup(contractId, hands) {
   const S = T.createGame();
   S.chooser = 0;
@@ -23,26 +23,33 @@ function setup(contractId, hands) {
   return S;
 }
 
-// hearts cannot be led while closed, unless the hand is all hearts
+// contract names: لطش، بنات، دينار، ختيار، تركس
 {
-  const S = setup('qulub', [
-    [C(0, 5), C(1, 13), C(2, 3)], [], [], []
+  const names = T.CONTRACT_ORDER.map(id => T.CONTRACTS[id].name);
+  assert.deepStrictEqual(names, ['لطش', 'بنات', 'دينار', 'ختيار', 'تركس']);
+}
+
+// suit colors: hearts and diamonds red, spades and clubs black
+{
+  assert.strictEqual(T.SUITS[1], '♥');
+  assert.strictEqual(T.SUITS[2], '♦');
+  assert.ok(T.isDiamond({ s: 2, r: 5 }), '♦ is the dinar suit');
+  assert.ok(T.isHeart({ s: 1, r: 5 }), '♥ is the koba suit');
+}
+
+// any suit may be led in kingdoms (no lock rule in trix)
+{
+  const S = setup('dinar', [
+    [C(1, 5), C(0, 13), C(2, 7)], [], [], []
   ]);
   S.turn = 0;
-  let legal = T.legalPlays(S, 0);
-  assert.ok(legal.every(c => !T.isHeart(c)), 'hearts closed while leading');
-  S.heartsOpened = true;
-  legal = T.legalPlays(S, 0);
-  assert.strictEqual(legal.length, 3);
-  S.heartsOpened = false;
-  S.players[0].hand = [C(1, 2), C(1, 9)];
-  legal = T.legalPlays(S, 0);
-  assert.strictEqual(legal.length, 2, 'all-hearts hand can lead hearts');
+  const legal = T.legalPlays(S, 0);
+  assert.strictEqual(legal.length, 3, 'any suit can lead in trix kingdoms');
 }
 
 // must follow suit
 {
-  const S = setup('salb', [
+  const S = setup('latsh', [
     [C(0, 3), C(0, 9), C(3, 1)], [], [], []
   ]);
   S.leadSuit = 0;
@@ -56,7 +63,7 @@ function setup(contractId, hands) {
 
 // trick winner: highest of led suit, ace high
 {
-  const S = setup('salb', [[], [], [], []]);
+  const S = setup('latsh', [[], [], [], []]);
   S.leadSuit = 0;
   S.table = [
     { seat: 0, card: C(0, 10) },
@@ -70,9 +77,9 @@ function setup(contractId, hands) {
   assert.strictEqual(S.table.length, 0);
 }
 
-// scoring: salb / banat / qulub / shabah
+// scoring: latsh / banat / dinar / khtiyar
 {
-  const S = setup('salb', [[], [], [], []]);
+  const S = setup('latsh', [[], [], [], []]);
   S.players[0].tricks = 3;
   S.players[1].tricks = 10;
   assert.deepStrictEqual(T.computeDeltas(S), [-30, -100, 0, 0]);
@@ -81,15 +88,15 @@ function setup(contractId, hands) {
   const S = setup('banat', [[], [], [], []]);
   S.players[0].taken = [C(0, 12), C(1, 12), C(2, 5)];
   S.players[1].taken = [C(3, 12)];
-  assert.deepStrictEqual(T.computeDeltas(S), [-100, -50, 0, 0]);
+  assert.deepStrictEqual(T.computeDeltas(S), [-50, -25, 0, 0]);
 }
 {
-  const S = setup('qulub', [[], [], [], []]);
-  S.players[2].taken = [C(1, 13), C(1, 1), C(0, 5)];
-  assert.deepStrictEqual(T.computeDeltas(S), [0, 0, -40, 0]);
+  const S = setup('dinar', [[], [], [], []]);
+  S.players[2].taken = [C(2, 13), C(2, 1), C(0, 5)];
+  assert.deepStrictEqual(T.computeDeltas(S), [0, 0, -20, 0]);
 }
 {
-  const S = setup('shabah', [[], [], [], []]);
+  const S = setup('khtiyar', [[], [], [], []]);
   S.players[3].taken = [C(1, 13), C(0, 13)];
   assert.deepStrictEqual(T.computeDeltas(S), [0, 0, 0, -75]);
 }
